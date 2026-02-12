@@ -1,5 +1,15 @@
 # Assessments
 
+## Overview
+
+| Assessment | CLOs | Weight | Due |
+|---|---|---|---|
+| Lab diaries (8 × 1.25%) | 1, 2, 3 | 10% | Weekly |
+| In-class test 1 | 2 | 20% | 22 April (w7) |
+| In-class test 2 | 2, 3 | 20% | 20 May (w11) |
+| In-class presentation | 1, 2, 3 | 10% | 27 May (w12) |
+| Research report | 1, 2, 3 | 40% | 30 May (Fri) |
+
 ## Assessment 1: Lab Diaries (10%)
 
 Eight weekly lab diaries submitted across the teaching weeks. Each diary is marked satisfactory/not satisfactory (1.25% each, full credit for satisfactory). Labs take place in the final 60–90 minutes of the seminar. Coding itself is not marked; the diary records progress and engagement.
@@ -26,7 +36,7 @@ Covers material from weeks 8–10 (machine learning, IPTW, measurement, Quarto w
 We will supply the data. Lab sessions are designed to support you in this assignment. We assume no statistical background.
 ```
 
-Students choose **one** of two formats and must declare their choice by end of w6 (2 April).
+Students choose **one** of two formats. You must declare your choice by submitting the option form on Nuku by **Friday 3 April** (end of w6). If no declaration is received by this date, Option A is assumed.
 
 ### Option A: Research Report
 

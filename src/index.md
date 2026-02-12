@@ -14,7 +14,7 @@ Prof Joseph Bulbulia | Victoria University of Wellington
 | In-class test 1 | 2 | 20% | 22 April (w7) |
 | In-class test 2 | 2, 3 | 20% | 20 May (w11) |
 | In-class presentation | 1, 2, 3 | 10% | 27 May (w12) |
-| Research report | 1, 2, 3 | 40% | 30 May (Fri, end of w12) |
+| Research report | 1, 2, 3 | 40% | 30 May (Fri) |
 
 ```admonish tip title="Accessing Lectures and Readings"
 - **Seminar:** Wednesdays, 14:10–17:00, [Easterfield Building EA120](https://www.wgtn.ac.nz/about/campuses-facilities/campuses/kelburn/kelburn-campus-map)
