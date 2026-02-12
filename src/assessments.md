@@ -32,11 +32,16 @@ Covers material from weeks 8–10 (machine learning, IPTW, measurement, Quarto w
 
 ## Assessment 5: Research Report (40%) — Due 30 May
 
-```admonish info title="Research Report"
+```admonish tip title="You choose your format"
+Students choose **one** of two formats for the research report:
+
+- **Option A: Research Report** — quantify an average treatment effect using the NZAVS synthetic dataset.
+- **Option B: Marsden Fund EOI** — write a first-round Marsden Fund Expression of Interest using the causal inference framework.
+
+You must declare your choice by submitting the option form on Nuku by **Friday 3 April** (end of w6). If no declaration is received by this date, Option A is assumed.
+
 We will supply the data. Lab sessions are designed to support you in this assignment. We assume no statistical background.
 ```
-
-Students choose **one** of two formats. You must declare your choice by submitting the option form on Nuku by **Friday 3 April** (end of w6). If no declaration is received by this date, Option A is assumed.
 
 ### Option A: Research Report
 

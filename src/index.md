@@ -14,7 +14,7 @@ Prof Joseph Bulbulia | Victoria University of Wellington
 | In-class test 1 | 2 | 20% | 22 April (w7) |
 | In-class test 2 | 2, 3 | 20% | 20 May (w11) |
 | In-class presentation | 1, 2, 3 | 10% | 27 May (w12) |
-| Research report | 1, 2, 3 | 40% | 30 May (Fri) |
+| Research report (Option A or B) | 1, 2, 3 | 40% | 30 May (Fri) |
 
 ```admonish tip title="Accessing Lectures and Readings"
 - **Seminar:** Wednesdays, 14:10–17:00, [Easterfield Building EA120](https://www.wgtn.ac.nz/about/campuses-facilities/campuses/kelburn/kelburn-campus-map)
@@ -29,7 +29,7 @@ Prof Joseph Bulbulia | Victoria University of Wellington
 |---|---|
 | **Course coordinator** | Prof Joseph Bulbulia, [joseph.bulbulia@vuw.ac.nz](mailto:joseph.bulbulia@vuw.ac.nz) |
 | **Office** | EA324 |
-| **R help** | Dr Inkuk Kim, [inkuk.kim@vuw.ac.nz](mailto:inkuk.kim@vuw.ac.nz) |
+| **R help** | Boyang Cao, [caoboya@myvuw.ac.nz](mailto:caoboya@myvuw.ac.nz) |
 
 ## Course Description
 
@@ -44,3 +44,9 @@ In this advanced course, students develop foundational skills in cross-cultural 
 2. **Understanding causal inference.** Students will develop a robust understanding of causal inference concepts and approaches, with particular emphasis on how they mitigate common pitfalls in cross-cultural research. We focus on designing studies, analysing data, and drawing strong conclusions about cause-and-effect relationships across cultures.
 
 3. **Understanding measurement in comparative settings.** Students will learn techniques for constructing and validating psychometrically sound measures across diverse cultures. We examine how to ensure measurements are reliable, cross-culturally valid, and aligned with theoretical constructs while focusing strongly on causal reasoning.
+
+---
+
+## Licence
+
+&copy; 2026 Joseph Bulbulia. This work is licensed under a [Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International Licence](https://creativecommons.org/licenses/by-nc-sa/4.0/).
