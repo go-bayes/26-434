@@ -1,0 +1,21 @@
+[book]
+title = "PSYC 434: Conducting Research Across Cultures"
+authors = ["Joseph Bulbulia"]
+language = "en"
+src = "src"
+
+[build]
+build-dir = "book"
+
+[output.html]
+additional-css = ["theme/epic-lab.css", "./mdbook-admonish.css"]
+default-theme = "light"
+preferred-dark-theme = "navy"
+git-repository-url = "https://github.com/go-bayes/26-434"
+
+[preprocessor.katex]
+after = ["links"]
+
+[preprocessor.admonish]
+command = "mdbook-admonish"
+assets_version = "3.1.0" # do not edit: managed by `mdbook-admonish install`

@@ -1,3 +1,5 @@
+# mdbook output
+/book/
 
 .Rproj.user
 .Rhistory
