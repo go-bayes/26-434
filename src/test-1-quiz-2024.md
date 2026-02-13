@@ -2,6 +2,7 @@
 
 Last year's in-class quiz covering key concepts and causal diagrams. Includes answers.
 
-<object data="resources/434-quiz-2024.pdf" type="application/pdf" width="100%" height="800px">
-  <p>Your browser does not support embedded PDFs. <a href="resources/434-quiz-2024.pdf">Download the quiz</a>.</p>
-</object>
+<div class="pdf-embed">
+<iframe src="resources/434-quiz-2024.pdf" width="100%" height="800px"></iframe>
+<p><a href="resources/434-quiz-2024.pdf">Download the quiz</a></p>
+</div>

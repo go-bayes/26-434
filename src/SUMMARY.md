@@ -28,8 +28,19 @@
 - [Week 5: Average Treatment Effects](week-05.md)
 - [Week 6: Effect Modification / CATE](week-06.md)
 - [Week 7: In-Class Test 1](week-07.md)
-- [Week 8: Machine Learning / IPTW](week-08.md)
-- [Week 9: Hands-On Analysis](week-09.md)
-- [Week 10: Quarto / Measurement](week-10.md)
+- [Week 8: Heterogeneous Treatment Effects and Machine Learning](week-08.md)
+- [Week 9: Resource Allocation and Policy Trees](week-09.md)
+- [Week 10: Classical Measurement Theory from a Causal Perspective](week-10.md)
 - [Week 11: In-Class Test 2](week-11.md)
 - [Week 12: Student Presentations](week-12.md)
+
+---
+
+# Weekly Labs
+
+- [Lab 1: Install R and RStudio](lab-01.md)
+- [Lab 2: Regression, Graphing, and Simulation](lab-02.md)
+- [Lab 3: Regression and Confounding Bias](lab-03.md)
+- [Lab 4: Causal Diagrams with ggdag](lab-04.md)
+- [Lab 5: G-Computation and the clarify Package](lab-05.md)
+- [Lab 6: Data Wrangling and Effect Modification](lab-06.md)

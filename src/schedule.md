@@ -13,9 +13,9 @@
 | — | 8 Apr | Mid-trimester break |
 | — | 15 Apr | Mid-trimester break |
 | w7 | 22 Apr | **In-class test 1 (20%)** |
-| w8 | 29 Apr | Machine learning / IPTW |
-| w9 | 6 May | Hands-on analysis |
-| w10 | 13 May | Quarto / Measurement |
+| w8 | 29 Apr | Heterogeneous treatment effects and machine learning |
+| w9 | 6 May | Resource allocation and policy trees |
+| w10 | 13 May | Classical measurement theory from a causal perspective |
 | w11 | 20 May | **In-class test 2 (20%)** |
 | w12 | 27 May | **Student presentations (10%)** |
 

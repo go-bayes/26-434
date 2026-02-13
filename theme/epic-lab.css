@@ -1,1 +1,21 @@
 /* epic-lab theme for mdbook — currently using mdbook defaults */
+
+/* keep embedded PDFs readable in dark themes */
+.pdf-embed {
+  color-scheme: light;
+  background: #fff;
+  border-radius: 4px;
+  padding: 4px;
+}
+
+.pdf-embed iframe {
+  border: none;
+  display: block;
+}
+
+/* keep SVG diagrams readable in dark themes */
+.content img[src$=".svg"] {
+  background: #fff;
+  border-radius: 4px;
+  padding: 8px;
+}

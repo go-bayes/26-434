@@ -24,7 +24,7 @@ The test is in class. Come to the seminar room (EA120) with a writing instrument
 
 ## Assessment 3: In-Class Test 2 (20%) — 20 May
 
-Covers material from weeks 8–10 (machine learning, IPTW, measurement, Quarto workflows). Same format and conditions as test 1.
+Covers material from weeks 8–10 (heterogeneous treatment effects, machine learning, resource allocation, policy trees, and classical measurement theory). Same format and conditions as test 1.
 
 ## Assessment 4: In-Class Presentation (10%) — 27 May
 
