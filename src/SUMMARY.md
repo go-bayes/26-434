@@ -12,6 +12,13 @@
 
 ---
 
+# Resources
+
+- [Test 1 Study Sheet](test-1-study-sheet.md)
+- [Practice Quiz 2024 (with Answers)](test-1-quiz-2024.md)
+
+---
+
 # Weekly Content
 
 - [Week 1: Introduction / Intro to R](week-01.md)
