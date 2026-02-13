@@ -1,947 +1,1135 @@
-# Lab 4: Causal Diagrams with ggdag
+# Lab 4: Regression and Confounding Bias
 
-Note: you may also download the lab here: [Download the R script for Lab 04](https://raw.githubusercontent.com/go-bayes/psych-434-2025/refs/heads/main/laboratory/04-lab.R)
-
-## Load libraries
+## Packages
 
 ```r
-# data-wrangling
-if (!require(tidyverse, quietly = TRUE)) {
-  install.packages("tidyverse")
-  library(tidyverse)
+# install and load packages
+if (!require(devtools, quietly = TRUE)) {
+  install.packages("devtools")
+  library(devtools)
 }
 
-# graphing
-if (!require(ggplot2, quietly = TRUE)) {
-  install.packages("ggplot2")
-  library(ggplot2)
-}
-
-# automated causal diagrams
-if (!require(ggdag, quietly = TRUE)) {
-  install.packages("ggdag")
-  library(ggdag)
-}
+library("margot")
+library("tidyverse")
+library("splines")
+library("report")
+library("performance")
+library("ggeffects")
+library("sjPlot")
+library("dplyr")
+library("ggplot2")
+library("skimr")
+library("gtsummary")
+library("table1")
+library("kableExtra")
+library("patchwork")
+library("parameters")
 ```
 
-We can use the `ggdag` package to evaluate confounding.
+---
 
-## Omitted variable bias causal graph
+# Regression
 
-Let's use `ggdag` to identify confounding arising from omitting Z in our regression of X on Y.
+This week we introduce regression.
 
-First we write out the DAG as follows:
+## Learning Outcomes
+
+By learning regression, you will be better equipped to do psychological science and to evaluate psychological research.
+
+## What is Regression?
+
+Broadly speaking, a regression model is a method for inferring the expected average features of a population and its variance conditional on other features of the population as measured in a sample.
+
+We shall see that regression encompasses more than this definition; however, this definition makes a start.
+
+To understand regression, we need to understand the following jargon words: population, sample, measurement, and inference.
+
+### What is a population?
+
+In science, a population is a hypothetical construct. It is the set of all potential members of a set of things. In psychological science, that set is typically a collection of individuals. We want to understand "The population of all human beings?" or "The New Zealand adult population"; or "The population of undergraduates who may be recruited for IPRP in New Zealand."
+
+### What is a sample?
+
+A sample is a randomly realised sub-population from the larger abstract population that a scientific community hopes to generalise about.
+
+Think of selecting balls randomly from an urn. When pulled at random, the balls may inform us about the urn's contents. For example, if we select one white ball and one black ball, we may infer that the balls in the urn are not all white or all black.
+
+### What is "measurement"?
+
+A measure is a tool or method for obtaining numerical descriptions of a sample. We often call measures "scales."
+
+A measurement is the numerical description we obtain from sensors such as statistical surveys, census data, twitter feeds, and so forth.
+
+In the course, we have encountered numerical scales, ordinal scales, and factors. The topic of measurement in psychology is very broad. As we shall see, the trail of the serpent of measurement runs across comparative psychological research.
+
+It is essential to remember that measures can be prone to error. Error-prone scales may nevertheless be helpful. However, we need to investigate their utility against the backdrop of specific interests and purposes.
+
+### What is a parameter?
+
+In regression, we combine measurements on samples with probability theory to guess about the properties of a population we will never observe. We call these properties "parameters."
+
+### What is statistical inference?
+
+The bulk of statistical inference consists of educated guessing about population parameters.
+
+### Probability distributions and statistical guessing
+
+Inference is possible because the parameters of naturally occurring populations are structured by data-generating processes that are approximated by **probability distributions.** A probability distribution is a mathematical function describing a random event's probability. Today we will be focusing on height.[^1]
+
+[^1]: The relationship of probability distributions and data-generating processes is complex, intriguing, and both historically and philosophically rich $\dots$. Because our interests are applied, we will hardly touch upon this richness in this course.
+
+Today we will discuss the "normal" or "Gaussian distribution." A large number of data-generating processes in nature conform to the normal distribution.
+
+Let us consider some examples of randomly generated samples, which we will obtain using R's `rnorm` function.
+
+### 10-person sample of heights
 
 ```r
-# code for creating a DAG
-graph_fork <- dagify(Y ~ L,
-                   A ~ L,
-                   exposure = "A",
-                   outcome = "Y") |>
-  tidy_dagitty(layout = "tree")
-
-# plot the DAG
-graph_fork |>
-  ggdag() + theme_dag_blank() + labs(title = "L is a common cause of A and Y")
-```
-
-Next we ask `ggdag` which variables we need to include if we are to obtain an unbiased estimate of the outcome from the exposure:
-
-```r
-# use this code
-ggdag::ggdag_adjustment_set(graph_fork) +
-  theme_dag_blank() +
-  labs(title = "{L} is the exclusive member of the confounder set for A and Y. Conditioning on L 'd-separates' A and Y")
-```
-
-The causal graph tells us to obtain an unbiased estimate of A on Y we must condition on L.
-
-And indeed, when we included the omitted variable L in our simulated dataset it breaks the association between X and Y:
-
-```r
-# set seed
+# seed
 set.seed(123)
 
-# number of observations
-N = 1000
+# generate 10 samples, average 170, sd = 20
+draws_10 <- rnorm(10, mean = 170, sd = 20)
 
-# confounder
-L = rnorm(N)
-
-# A is caused by L
-A = rnorm(N, L)
-
-# Y draws randomly from L but is not caused by A
-Y = rnorm(N, L)
-
-# regress Y on A without control
-fit_fork <- lm(Y ~ A)
-
-# A is "significant"
-parameters::model_parameters(fit_fork)
-
-# regress Y on A with control
-fit_fork_controlled <- lm(Y ~ A + L)
-
-# A and Y are no longer associated, conditioning worked.
-parameters::model_parameters(fit_fork_controlled)
+# ggplot quick histogram
+ggplot2::qplot(draws_10, binwidth = 2)
 ```
 
-## Mediation and causation
-
-Suppose we were interested in the causal effect of X on Y. We have a direct effect of X on Y as well as an indirect effect of X on Y through M. We use `ggdag` to draw the DAG:
+### 100-person sample of heights
 
 ```r
-graph_mediation <- dagify(Y ~ M,
-                 M ~ A,
-                exposure = "A",
-                outcome = "Y") |>
-  ggdag::tidy_dagitty(layout = "tree")
-
-graph_mediation |>
-  ggdag() +
-  theme_dag_blank() +
-  labs(title = "Mediation Graph")
-```
-
-Here is another way:
-
-```r
-graph_mediation_full <- ggdag_mediation_triangle(x = "A",
-                         y = "Y",
-                         m = "M",
-                         x_y_associated = FALSE)
-
-graph_mediation_full + theme_dag_blank() +
-  labs(title = "Fully Mediated Graph")
-```
-
-What should we condition on if we are interested in the causal effect of changes in X on changes in Y?
-
-We can pose the question to `ggdag`:
-
-```r
-# ask ggdag which variables to condition on
-ggdag::ggdag_adjustment_set(graph_fork)
-```
-
-"Backdoor Paths Unconditionally Closed" means that, assuming the DAG we have drawn is correct, we may obtain an unbiased estimate of X on Y without including additional variables.
-
-Later we shall understand why this is the case. (There is no "backdoor path" from X to Y that would bias our estimate, hence the estimate X->Y is an unbiased causal estimate, conditional on our DAG.)
-
-For now, we can enrich our language for causal inference by considering the concepts of *d-connected* and *d-separated*:
-
-Two variables are *d-connected* if information flows between them (conditional on the graph), and they are *d-separated* if they are conditionally independent of each other.
-
-```r
-# use this code to examine d-connectedness
-ggdag::ggdag_dconnected(graph_mediation)
-```
-
-In this case, d-connection is a good thing because we can estimate the causal effect of A on Y.
-
-In other cases, d-connection will spoil the model. We have seen this for omitted variable bias. A and Y are d-separated conditional on L, and that's our motivation for including L. These concepts are tricky, but they get easier with practice.
-
-To add some grit to our exploration of mediation, let's simulate data that are consistent with our mediation DAG:
-
-```r
+# reproducibility
 set.seed(123)
-N <- 100
-x <- rnorm(N)           # sim x
-m <- rnorm(N, x)        # sim X -> M
-y <- rnorm(N, x + m)    # sim M -> Y
-df <- data.frame(x, m, y)
 
-df <- df |>
-  dplyr::mutate(x_s = scale(x),
-                m_s = scale(m))
-```
-
-First we ask, is X related to Y?
-
-```r
-fit_mediation <- lm(y ~ x_s, data = df)
-parameters::model_parameters(fit_mediation)
-```
-
-Yes.
-
-Next we ask, is A related to Y conditional on M?
-
-```r
-fit_total_mediated_effect <- lm(y ~ x_s + m_s, data = df)
-parameters::model_parameters(fit_total_mediated_effect)
-```
-
-Yes, but notice this is a different question. The effect of X is attenuated because M contributes to the causal effect of Y.
-
-```r
-fit_total_effect <- lm(y ~ x_s, data = df)
-parameters::model_parameters(fit_total_effect)
-```
-
-## Pipe confounding (full mediation)
-
-Suppose we are interested in the effect of x on y, in a scenario when m fully mediates the relationship of x on y.
-
-```r
-mediation_triangle(
-  x = NULL,
-  y = NULL,
-  m = NULL,
-  x_y_associated = FALSE
-) |>
-  ggdag()
-```
-
-What variables do we need to include to obtain an unbiased estimate of X on Y?
-
-Let's fill out this example by imagining an experiment.
-
-Suppose we want to know whether a ritual action condition (X) influences charity (Y). We have good reason to assume the effect of X on Y happens entirely through perceived social cohesion (M):
-
-$X \to M \to Z$ or ritual $\to$ social cohesion $\to$ charity.
-
-Let's simulate some data:
-
-```r
-set.seed(123)
-# participants
-N <- 100
-
-# initial charitable giving
-c0 <- rnorm(N, 10, 2)
-
-# assign treatments and simulate charitable giving and increase in social cohesion
-ritual <- rep(0:1, each = N / 2)
-cohesion <- ritual * rnorm(N, .5, .2)
-
-# increase in charity
-c1 <- c0 + ritual * cohesion
-
-# dataframe
-d <- data.frame(c0 = c0,
-                c1 = c1,
-                ritual = ritual,
-                cohesion = cohesion)
-skimr::skim(d)
-```
-
-Does the ritual increase charity?
-
-If we only include the ritual condition in the model, we find that ritual condition reliably predicts increases in charitable giving:
-
-```r
-parameters::model_parameters(
-  lm(c1 ~ c0 + ritual, data = d)
-)
-```
-
-Does the ritual increase charity adjusting for levels of social cohesion?
-
-```r
-parameters::model_parameters(
-  lm(c1 ~ c0 + ritual + cohesion, data = d)
-)
-```
-
-The answer is that the (direct) effect of ritual entirely drops out when we include both ritual and social cohesion. Why is this? The answer is that once our model knows `m` it does not obtain any new information by knowing `x`.
-
-If we were interested in assessing $x \to y$ but $x$ were to affect $y$ through $m$ (i.e. $x \to m \to y$) then conditioning on $m$ would **block the path** from $x \to y$. Including $m$ leads to **pipe confounding**.
-
-In experiments we should never condition on a post-treatment variable.
-
-## Masked relationships
-
-Imagine two variables were to affect an outcome. Both are correlated with each other. One affects the outcome positively and the other affects the outcome negatively. How shall we investigate the causal role of the focal predictor?
-
-Consider two correlated variables that jointly predict political conservatism (C) and religion (R). Imagine that one variable has a positive effect and the other has a negative effect on distress (K6).
-
-First consider this relationship, where conservatism causes religion:
-
-```r
-library(ggdag)
-dag_m1 <- dagify(K ~ C + R,
-                 R ~ C,
-                 exposure = "C",
-                 outcome = "K") |>
-  tidy_dagitty(layout = "tree")
+# generate 100 samples, average 170, sd = 20
+draws_100 <- rnorm(100, mean = 170, sd = 20)
 
 # graph
-dag_m1 |>
-  ggdag()
+ggplot2::qplot(draws_100, binwidth = 2)
 ```
 
-We can simulate the data:
+### 10000-person sample of heights
 
 ```r
-# C -> K <- R
-# C -> R
+# reproducibility
 set.seed(123)
-n <- 100
-C <- rnorm(n)
-R <- rnorm(n, C)
-K <- rnorm(n, R - C)
 
-d_sim <- data.frame(K = K, R = R, C = C)
+# n = 10,000
+draws_10000 <- rnorm(1e5, mean = 170, sd = 20)
+
+# plot
+ggplot2::qplot(draws_10000, binwidth = 2)
 ```
 
-First we only condition on conservatism:
+## How can I use regression to infer a population parameter?
+
+We can use R to investigate the *average* height of our imaginary population from which the preceding samples were randomly drawn. We do this in R by writing an "intercept-only" model as follows:
 
 ```r
-ms1 <- parameters::model_parameters(
-  lm(K ~ C, data = d_sim)
-)
-plot(ms1)
-ms1
+# syntax for an intercept-only model
+model <- lm(outcome ~ 1, data = data)
+
+# base R summary
+summary(model)
 ```
 
-Next, only religion:
+Using the previous simulations:
+
+N = 10 random draws
 
 ```r
-ms2 <- parameters::model_parameters(
-  lm(K ~ R, data = d_sim)
-)
-plot(ms2)
+# write the model and get a nice table for it
+sjPlot::tab_model(lm(draws_10 ~ 1))
 ```
 
-When we add both C and R, we see them "pop" in opposite directions, as is typical of masking:
+N = 100 random draws
 
 ```r
-ms3 <- parameters::model_parameters(
-  lm(K ~ C + R, data = d_sim)
-)
-plot(ms3)
+sjPlot::tab_model(lm(draws_100 ~ 1))
 ```
 
-Note that when you ask `ggdag` to assess how to obtain an unbiased estimate of C on K it will tell you you don't need to condition on R.
+N = 10,000 random draws
 
 ```r
-dag_m1 |>
-  ggdag_adjustment_set()
+sjPlot::tab_model(lm(draws_10000 ~ 1))
 ```
 
-Yet recall when we just assessed the relationship of C on K we got this:
+What do we notice about the relationship between sample size and the estimated population average?
 
 ```r
-plot(ms1)
+sjPlot::tab_model(lm(draws_10 ~ 1),
+                  lm(draws_100 ~ 1),
+                  lm(draws_10000 ~ 1))
 ```
 
-Is the DAG wrong?
+## Regression with a single covariate
 
-No. The fact that $C \to R$ is positive and $R \to K$ is negative means that if we were to increase C, we wouldn't reliably increase K. The total effect of C just isn't reliable.
+Do mothers' heights *predict* daughter height? If so, what is the magnitude of the relationship?
 
-## Collider confounding
+Francis Galton is credited with inventing regression analysis. Galton observed that offspring's heights tend to fall between parental height and the population average, which Galton termed "regression to the mean." Galton sought a method for educated guessing about heights, and this led to fitting a line of regression by a method called "least squares." (For a history, see [here](https://rss.onlinelibrary.wiley.com/doi/full/10.1111/j.1740-9713.2011.00509.x).)
 
-The selection-distortion effect (Berkson's paradox).
-
-This example is from the book *Statistical Rethinking*. Imagine in science there is no relationship between the newsworthiness of science and its trustworthiness. Imagine further that selection committees make decisions on the basis of both newsworthiness and the trustworthiness of scientific proposals.
-
-This presents us with the following graph:
+The following dataset is from "The heredity of height" by Karl Pearson and Alice Lee (1903) (Pearson & Lee, 1903). I obtained it from (Gelman et al., 2020). Let us use this dataset to investigate the relationship between mothers' and daughters' heights.
 
 ```r
-dag_sd <- dagify(S ~ N,
-                 S ~ T,
-                 labels = c("S" = "Selection",
-                            "N" = "Newsworthy",
-                            "T" = "Trustworthy")) |>
-  tidy_dagitty(layout = "nicely")
+# import data
+df_pearson_lee <-
+  data.frame(read.table(
+    url(
+      "https://raw.githubusercontent.com/avehtari/ROS-Examples/master/PearsonLee/data/MotherDaughterHeights.txt"
+    ),
+    header = TRUE
+  ))
+
+# centre mother's height for later example
+df_pearson_lee_centered <- df_pearson_lee |>
+  dplyr::mutate(mother_height_c = as.numeric(scale(
+    mother_height, center = TRUE, scale = FALSE
+  )))
+
+skimr::skim(df_pearson_lee_centered)
+```
+
+Pearson and Lee collected 5,524 observations from mother/daughter height pairs. Let us examine the data, first by plotting the relationship.
+
+What is happening here?
+
+```r
+# explore pearson lee data
+explore_md <-
+  ggplot2::ggplot(data = df_pearson_lee_centered,
+                  aes(y = daughter_height, x = mother_height)) +
+  geom_jitter(alpha = .2) +
+  labs(title = "The relationship between mother's height and daughter's height") +
+  ylab("Daughter's height") +
+  xlab("Mother's height") +
+  theme_classic()
+
+# print
+print(explore_md)
+```
+
+Is there a linear predictive relationship between these two parameters? In regression we examine the line of best fit.
+
+```r
+# regression
+m1 <-
+  lm(daughter_height ~ mother_height, data = df_pearson_lee_centered)
 
 # graph
-dag_sd |>
-  ggdag(text = FALSE, use_labels = "label") + theme_dag_blank()
+sjPlot::tab_model(m1)
 ```
 
-When two arrows enter into a variable, it opens a path of information between the two variables.
-
-Very often this opening of information has disastrous implications. In the human sciences, included variable bias is a woefully underrated problem.
+We can plot the coefficient, but in a model with one predictor, this is not very informative. However, as we continue in the course, we shall see that plotting coefficients can be easier than deciphering the numbers in tables. Here are two methods for plotting.
 
 ```r
-ggdag_dseparated(
-  dag_sd,
-  from = "T",
-  to = "N",
-  controlling_for = "S",
-  text = FALSE,
-  use_labels = "label"
-) + theme_dag_blank()
+# get model parameters
+t_m1 <- parameters::model_parameters(m1, ci = 0.95)
+
+# plot
+plot(t_m1) +
+  labs(title = "The relationship between mother's height and daughter's height") +
+  ylab("Daughter's height")
 ```
 
-We can use the `ggdag` package to find colliders among our variables:
+## How do we interpret the regression model?
+
+Let us write the equation out in mathematics. How do we read this?[^2]
+
+[^2]: Later, we shall prefer a different way of writing regression equations in maths. (Note: writing maths is not maths; it is just encoding the model that we have written.)
+
+$$
+\operatorname{daughter\_height} = \alpha + \beta_{1}(\operatorname{mother\_height}) + \epsilon
+$$
+
+The maths says that the expected daughter's height in a population is predicted by the average height of the population when mothers' heights are set to zero units (note, this is impossible; we shall come back to this) plus $\beta \times$ units of daughter's height (inches) for each additional unit of mother's height (inches).
+
+We can plug the output of the model directly into the equation as follows:
+
+$$
+\operatorname{\widehat{daughter\_height}} = 29.8 + 0.54(\operatorname{mother\_height})
+$$
+
+### Graph the relationship between mother's and daughter's heights
 
 ```r
-# code for finding colliders
-ggdag::ggdag_collider(dag_sd,
-                      text = FALSE,
-                      use_labels = "label")
+library(ggeffects)
+predictions <- ggeffects::ggpredict(m1, terms = "mother_height",
+    add.data = TRUE,
+    dot.alpha = .1,
+    jitter = TRUE)
+
+plot_predictions <-
+  plot(predictions) +
+  theme_classic() +
+  labs(title = "Predicted values of daughter's height from the Pearson/Fox 1903 dataset")
+
+plot_predictions
 ```
 
-The following simulation (by Solomon Kurz) illustrates the selection-distortion effect, which Richard McElreath discusses in *Statistical Rethinking*.
+## Regression to predict beyond the range of a dataset
 
-First, simulate uncorrelated variables and a process of selection for sub-populations that score high on both indicators:
+Jyoti Amge is the world's shortest woman at 25 inches. Sandy Allen was the world's tallest woman at 91 inches. What are the expected heights of their daughters and of every intermediary woman in between?
 
 ```r
-# simulate selection distortion effect, following Solomon Kurz
-# https://bookdown.org/content/4857/the-haunted-dag-the-causal-terror.html
-set.seed(123)
-n <- 1000  # number of grant proposals
-p <- 0.05  # proportion to select
+# use the expand.grid command to create a sequence of points for mother's height
+df_expand_grid <- expand.grid(mother_height = c(25:91))
 
-d <-
-  # uncorrelated newsworthiness and trustworthiness
-  dplyr::tibble(
-    newsworthiness  = rnorm(n, mean = 0, sd = 1),
-    trustworthiness = rnorm(n, mean = 0, sd = 1)
+# use the predict function to create a new response
+df_predict <-
+  predict(m1,
+          type = "response",
+          interval = "confidence",
+          newdata = df_expand_grid)
+
+# create a new dataframe for the new sequence of points for mother's height and the predicted data
+newdata <- data.frame(df_expand_grid, df_predict)
+head(newdata)
+```
+
+Graph the predicted results:
+
+```r
+# graph the expected results
+predplot <- ggplot(data = newdata,
+                   aes(x = mother_height, y = fit)) +
+  geom_point() +
+  geom_errorbar(aes(ymin = lwr, ymax = upr), width = .1) +
+  expand_limits(x = c(20, 91), y = c(0, 81)) +
+  theme_classic() +
+  labs(title = "Predicted values for a broader population")
+
+# plot the two graphs together (making the x and y axis at the same scale)
+library("patchwork")
+
+# old plot with the new axis and y-axis scales, and remove points
+plot_height <- plot(predplot, add.data = FALSE) + theme_classic()
+
+plot_height_title <-
+  plot_height +
+  expand_limits(x = c(20, 91), y = c(0, 81)) +
+  labs(title = "Predicted values of daughter's height from the Pearson/Fox 1903 dataset")
+
+# double graph
+plot_height_title / predplot +
+  plot_annotation(title = "What do you notice about these relationships?",
+                  tag_levels = "a")
+```
+
+A simple method for obtaining the predicted values from your fitted model is to obtain the effects output without producing a graph.
+
+```r
+# predicted values of mother height on daughter height
+library(ggeffects)
+ggeffects::ggpredict(m1, terms = "mother_height")
+```
+
+## Non-linear relationships
+
+Linear regression assumes linearity conditional on a model. Often your data will not be linear!
+
+Consider the following example:
+
+```r
+# simulate nonlinear relationship between x and y
+b <- c(2, 0.75)
+set.seed(12)
+x <- rnorm(100)
+set.seed(12)
+y <- rnorm(100, mean = b[1] * exp(b[2] * x))
+dat1 <- data.frame(x, y)
+
+ot1 <- lm(y ~ x, data = dat1)
+
+# plot linear effect
+plot(ggeffects::ggpredict(ot1, terms = "x",
+     add.data = TRUE,
+     dot.alpha = .4))
+```
+
+Non-linear relationship as modelled by a polynomial regression:
+
+```r
+# model: quadratic
+fit_non_linear <- lm(y ~ x + I(x ^ 2), data = dat1)
+
+# predictive plot
+plot(ggeffects::ggpredict(fit_non_linear, terms = "x",
+     add.data = TRUE,
+     dot.alpha = .4))
+```
+
+Here is another approach:
+
+```r
+# non-linear regression
+library(splines)
+
+# fit model
+fit_non_linear_b <- lm(y ~ x + poly(x, 2), data = dat1)
+
+# graph model
+plot(
+  ggeffects::ggpredict(fit_non_linear_b, terms = "x",
+  add.data = TRUE,
+  dot.alpha = .4
+))
+```
+
+Non-linear relationship as modelled by a general additive model (spline):
+
+```r
+# fit spline: not specified
+fit_non_linear_c <- lm(y ~ bs(x), data = dat1)
+
+# model parameters: coefficients are not interpretable
+parameters::model_parameters(fit_non_linear_c)
+
+plot(
+  ggeffects::ggpredict(fit_non_linear_c, terms = "x",
+  add.data = TRUE,
+  dot.alpha = .4
+))
+```
+
+## Centring
+
+Any linear transformation of a predictor is acceptable. Often we centre (or centre and scale) all indicators, which gives us an interpretable intercept (the expected population average when the other indicators are set to their average).
+
+```r
+library(ggeffects)
+
+# fit raw data
+fit_raw <- lm(daughter_height ~ mother_height, data = df_pearson_lee_centered)
+
+# fit centred data
+fit_centered <-
+  lm(daughter_height ~ mother_height_c, data = df_pearson_lee_centered)
+
+# compare the models
+sjPlot::tab_model(fit_raw, fit_centered)
+```
+
+Graph model:
+
+```r
+# graph centred model
+plot(
+  ggeffects::ggpredict(fit_centered, terms = "mother_height_c",
+  add.data = TRUE,
+  dot.alpha = .4
+))
+```
+
+Note: when fitting a polynomial or any interaction, it is important to centre your indicators. We shall come back to this point in later lectures.
+
+## Model evaluation
+
+Reviewers will sometimes ask you to assess model fit.
+
+A simple, but flawed way to assess accuracy of your model fit is to compare a model with one covariate with a simple intercept-only model and to assess improvement in either the `AIC` statistic or the `BIC` statistic. The `BIC` is similar to the `AIC` but adds a penalty for extra predictors. An absolute improvement in either statistic of n > 10 is considered to be a "better" model.
+
+We can use the `performance` package to generate a table that compares model fits.
+
+```r
+# load library
+library(performance)
+
+# intercept only
+fig_intercept_only <- lm(daughter_height ~ 1, data = df_pearson_lee)
+
+# covariate added
+fig_covariate <- lm(daughter_height ~ mother_height, data = df_pearson_lee)
+
+# evaluate
+performance::compare_performance(fig_intercept_only, fig_covariate)
+```
+
+What was the model "improvement?"
+
+```r
+# improved fit
+BIC(fig_intercept_only) - BIC(fig_covariate)
+```
+
+## Generate a report
+
+This is easy with the `report` package.
+
+For example:
+
+```r
+report::report_statistics(fig_covariate)
+```
+
+Or, if you want a longer report:
+
+```r
+report::report(fig_covariate)
+```
+
+Use "statistically significant" in place of "significant." This will avoid misleading your audience into thinking your result is important when what you intend to communicate is that it is reliable.
+
+## Assumptions of Regression
+
+From Gelman and Hill (Gelman & Hill, 2006):
+
+1. **Validity.** The most important assumption is that the data you are analysing should map to the research question you are trying to answer (Gelman et al., 2020, p. 152).
+
+2. **Representativeness.** A regression model is fit to data and is used to make inferences about a larger population, hence the implicit assumption in interpreting regression coefficients is that the sample is representative of the population (Gelman et al., 2020, p. 153).
+
+3. **Linearity.** The most important mathematical assumption of the linear regression model is that its deterministic component is a linear function of the separate predictors: $y = \beta_0 + \beta_1 x_1 + \beta_2 x_2 + \cdots$. If additivity is violated, it might make sense to transform the data (for example, if $y = abc$, then $\log y = \log a + \log b + \log c$) or to add interactions. If linearity is violated, perhaps a predictor should be put in as $1/x$ or $\log(x)$ instead of simply linearly. Or a more complicated relationship could be expressed using a nonlinear function such as a spline or Gaussian process (Gelman et al., 2020, p. 153).
+
+4. **Independence of errors.** The simple regression model assumes that the errors from the prediction line are independent, an assumption that is violated in time-series, spatial, and multilevel settings (Gelman et al., 2020, p. 153).
+
+5. **Equal variance of errors.** Unequal variance does not affect the most important aspect of a regression model, which is the form of the predictors (Gelman et al., 2020, p. 153).
+
+6. **Normality of errors.** The regression assumption that is generally least important is that the errors are normally distributed. In fact, for the purpose of estimating the regression line (as compared to predicting individual data points), the assumption of normality is barely important at all. Thus, in contrast to many regression textbooks, we do not recommend diagnostics of the normality of regression residuals (Gelman & Hill, 2006, p. 46). A good way to diagnose violations of some of the assumptions (importantly, linearity) is to plot the residuals versus fitted values or individual predictors (Gelman & Hill, 2006, p. 46).
+
+## Common Confusions
+
+### Regressions do not automatically give us "effects"
+
+People use the word "effect", but that is not what regression gives us by default.
+
+### "Normality Assumption"
+
+Gelman and Hill note that the "normality" assumption is the least important. The assumption pertains to the normality of residuals.
+
+### Statistical Independence
+
+This is the motivation for doing multi-level modelling: to condition on dependencies in the data. However, multi-level modelling can produce new problems if the error terms in the model are not independent of the outcome.
+
+### External Validity (wrong population)
+
+We sample from undergraduates, but infer about the human population.
+
+```admonish warning title="Model fit and causal inference"
+The concept of "better model fit" is relative to our interests and purposes. A better (lower) AIC statistic does not tell us whether a model is better for causal inference. We must assess whether a model satisfies the assumptions necessary for valid causal inference.
+```
+
+---
+
+# Simulation Demonstration 1: How Regression Coefficients Mislead
+
+### Methodology
+
+1. **Data generation**: we simulate a dataset for 1,000 individuals, where religious service attendance ($A$) affects wealth ($L$), which in turn affects charitable donations ($Y$). The simulation is based on predefined parameters that establish $L$ as a mediator between $A$ and $Y$.
+
+2. **Parameter definitions**: the probability of religious service ($A$) is set at 0.5. The effect of $A$ on $L$ (wealth) is given by $\beta = 2$. The effect of $L$ on $Y$ (charity) is given by $\delta = 1.5$. Standard deviations for $L$ and $Y$ are set at 1 and 1.5, respectively.
+
+3. **Model specifications**: Model 1 (incorrect assumption) considers a linear regression model assuming $L$ as a confounder, including $A$ and $L$ as regressors on $Y$. This model aligns with the data-generating process and correctly identifies $L$ as a mediator. According to the rules of d-separation (last week): **to identify the total effect of $A$ on $Y$ we must not include $L$.** Model 2 (correct model) fits a linear regression model that includes only $A$ as a regressor on $Y$ and omits the mediator $L$.
+
+4. **Analysis and comparison**: the analysis compares the estimated effects of $A$ on $Y$ under both model specifications. By including $L$ as a predictor in Model 1, we induce mediation bias. Model 2 correctly excludes $L$ from the model.
+
+5. **Presentation**: the results are displayed in a comparative table. The table contrasts the regression coefficients and significance levels obtained under each model.
+
+```r
+# simulation seed
+set.seed(123) # reproducibility
+
+# define the parameters
+n <- 1000 # number of observations
+p <- 0.5  # probability of A = 1
+alpha <- 0 # intercept for L
+beta <- 2  # effect of A on L
+gamma <- 1 # intercept for Y
+delta <- 1.5 # effect of L on Y
+sigma_L <- 1 # standard deviation of L
+sigma_Y <- 1.5 # standard deviation of Y
+
+# simulate the data: fully mediated effect by L
+A <- rbinom(n, 1, p) # binary exposure variable
+L <- alpha + beta * A + rnorm(n, 0, sigma_L) # mediator L affected by A
+Y <- gamma + delta * L + rnorm(n, 0, sigma_Y) # Y affected only by L
+
+# make the data frame
+data <- data.frame(A = A, L = L, Y = Y)
+
+# fit regression in which L is assumed to be a confounder
+example_fit_1 <- lm(Y ~ A + L, data = data)
+
+# fit regression in which L is assumed to be a mediator
+example_fit_2 <- lm(Y ~ A, data = data)
+
+# create gtsummary tables for each regression model
+table1 <- gtsummary::tbl_regression(example_fit_1)
+table2 <- gtsummary::tbl_regression(example_fit_2)
+
+# merge the tables for comparison
+table_comparison <- gtsummary::tbl_merge(
+  list(table1, table2),
+  tab_spanner = c("Model: Wealth assumed confounder",
+                  "Model: Wealth assumed to be a mediator")
+)
+
+# make markdown table
+markdown_table_0 <- as_kable_extra(table_comparison,
+                                   format = "markdown",
+                                   booktabs = TRUE)
+# print markdown table
+markdown_table_0
+```
+
+## Compare model fits
+
+### By all metrics, Model 1 fits better but it is confounded
+
+```r
+performance::compare_performance(example_fit_1, example_fit_2)
+```
+
+Model 1 exhibits mediator bias, but it has a considerably higher $R^2$, and a lower BIC.
+
+##### Focussing on the BIC (lower is better): Model 1 fits better, but it is confounded.
+
+```r
+BIC(example_fit_1) - BIC(example_fit_2)
+```
+
+```admonish warning title="Simulation 1 takeaway"
+In this simulation, we discovered that if we assess "effect" by "model fit" we will get the wrong *sign* for the coefficient of interest. The use of model fit perpetuates the *causality crisis* in psychological science (Bulbulia et al., 2022). Few are presently aware of this crisis. Causal diagrams show us how we can do better.
+```
+
+---
+
+# Simulation Demonstration 2: How Regression Coefficients Mislead
+
+### Methodology
+
+1. **Data generation**: we simulate a dataset for 1,000 individuals, where religious service attendance ($A$) affects wealth ($L$), and charitable donations ($Y$) also affect wealth $L$, but $A$ and $Y$ are not causally related.
+
+2. **Parameter definitions**: the probability of religious service ($A$) is set at 0.5. $Y$ has a mean of 0 and sd = 1, and is independent of $A$. $L$ is a linear function of $A$ and $Y$.
+
+3. **Model specifications**: Model 1 (incorrect) controls for $L$. Model 2 (correct) does not control for $L$.
+
+4. **Analysis and comparison**: compare models.
+
+```r
+# simulation seed
+set.seed(123) # reproducibility
+
+# define parameters
+n <- 1000 # number of observations
+p <- 0.5  # probability of A = 1
+
+# simulate the data
+A_1 <- rbinom(n, 1, p) # binary exposure variable
+Y_1 <- rnorm(n, 0, 1) # Y independent of A
+L_2 <- rnorm(n, A_1 + Y_1)
+
+# make the data frame
+data_collider <- data.frame(A = A_1, L = L_2, Y = Y_1)
+
+# fit regression controlling for collider L
+collider_example_fit_1 <- lm(Y ~ A + L, data = data_collider)
+
+# fit regression without collider
+collider_example_fit_2 <- lm(Y ~ A, data = data_collider)
+
+summary(collider_example_fit_1)
+
+# create gtsummary tables for each regression model
+collider_table1 <- gtsummary::tbl_regression(collider_example_fit_1)
+collider_table2 <- gtsummary::tbl_regression(collider_example_fit_2)
+
+# merge the tables for comparison
+collider_table_comparison <- gtsummary::tbl_merge(
+  list(collider_table1, collider_table2),
+  tab_spanner = c("Model: Wealth assumed confounder",
+                  "Model: Wealth not assumed to be a mediator")
+)
+
+# make markdown table
+markdown_table_1 <- as_kable_extra(collider_table_comparison,
+                                   format = "markdown",
+                                   booktabs = TRUE)
+# print table
+collider_table_comparison
+```
+
+## Compare model fits
+
+### By all metrics, Model 1 fits better but it is confounded.
+
+$A$ is not causally associated with $Y$. We generated the data so we know. However, the confounded model shows a better fit, and in this model the coefficient for $A$ is statistically significant (and negative).
+
+```r
+performance::compare_performance(collider_example_fit_1, collider_example_fit_2)
+```
+
+##### Again, the BIC (lower is better) for Model 1 is better, but it is entirely confounded.
+
+```r
+BIC(collider_example_fit_1) - BIC(collider_example_fit_2)
+```
+
+How does collider bias work? If we know that someone is *not* attending church, if they are charitable then we can *predict* they are wealthy. Similarly if we know someone is not wealthy but charitable, we can *predict* they attend religious service.
+
+However, in this simulation, we know that religion and wealth are *not* causally associated because we have simulated the data.
+
+```admonish warning title="Simulation 2 takeaway"
+In this simulation, we discovered that if we assess "effect" by "model fit", we get the wrong scientific inference. The use of model fit perpetuates the *causality crisis* in psychological science (Bulbulia et al., 2022). Let us do better.
+```
+
+## Resources on Regression that Do Not Perpetuate the Causality Crisis
+
+1. **Statistical Rethinking** (McElreath, 2020)
+2. **Regression and Other Stories** (Gelman et al., 2020)
+
+---
+
+# Exercises
+
+## Setup
+
+### Libraries
+
+```r
+library(tidyverse)
+library(patchwork)
+library(lubridate)
+library(kableExtra)
+library(gtsummary)
+```
+
+### Get data
+
+```r
+# package with data
+library(margot)
+
+# load data
+data("df_nz")
+```
+
+### Import Pearson and Lee mother's and daughters data
+
+```r
+df_pearson_lee <-
+  data.frame(read.table(
+    url(
+      "https://raw.githubusercontent.com/avehtari/ROS-Examples/master/PearsonLee/data/MotherDaughterHeights.txt"
+    ),
+    header = TRUE
+  ))
+
+# centre mother's height for later example
+df_pearson_lee <- df_pearson_lee |>
+  dplyr::mutate(mother_height_c = as.numeric(scale(
+    mother_height, center = TRUE, scale = FALSE
+  )))
+```
+
+```admonish note title="Note"
+For all exercises below, use only the 2018 wave of the `df_nz` dataset.
+```
+
+## Q1. Create a descriptive table and a descriptive graph for the `hlth_weight` and `hlth_height` variables in the `df_nz` dataset
+
+Select `hlth_height`, `hlth_weight` from the nz dataset. Filter only the 2018 wave. Create a descriptive table and graph these two variables. Annotate your workflow (at each step, describe what you are doing and why).
+
+## Q2. Regression height ~ weight and report results
+
+Using the `df_nz` dataset, write a regression model for height as predicted by weight. Create a table for your results. Create a graph/graphs to clarify the results of your regression model. Briefly report your results.
+
+## Q3. Regress height ~ male and report results
+
+Using the `df_nz` dataset, write a regression model for height as predicted by `male`. Create a table for your results. Create a graph/graphs to clarify the results of your regression model. Briefly report your results.
+
+## Q4. Regression to predict
+
+Using the regression coefficients from the Pearson and Lee 1903 dataset, predict the heights of daughters of women in the `df_nz` dataset.
+
+## Q5. Bonus
+
+On average, how much taller or shorter are women in New Zealand as sampled in the 2019 `df_nz` dataset compared with women in 1903 as sampled in the Pearson and Lee dataset? Clarify your inference.
+
+---
+
+# Solutions
+
+## Solutions: Setup
+
+```r
+## libraries
+library("tidyverse")
+library("patchwork")
+library("lubridate")
+library("kableExtra")
+library("gtsummary")
+```
+
+```r
+# get data
+library("margot")
+data("df_nz")
+```
+
+```r
+# import pearson and lee mother's and daughters data
+# in 1903, pearson and lee collected 5,524 observations from mother/daughter height pairs.
+
+df_pearson_lee <- data.frame(read.table(
+  url(
+    "https://raw.githubusercontent.com/avehtari/ROS-Examples/master/PearsonLee/data/MotherDaughterHeights.txt"
+  ),
+  header = TRUE
+))
+
+# centre mother's height for later example
+df_pearson_lee <- df_pearson_lee |>
+  dplyr::mutate(mother_height_c = as.numeric(scale(
+    mother_height, center = TRUE, scale = FALSE
+  )))
+```
+
+## Solution Q1: Descriptive table
+
+```r
+# required libraries
+library(gtsummary)
+library(dplyr)
+library(margot)
+
+# select focal variables and rename them for clarity
+df_nzdat <- df_nz |>
+  dplyr::filter(wave == 2019) |>
+  dplyr::select(hlth_weight, hlth_height, male) |>
+  dplyr::rename(weight = hlth_weight,
+                height = hlth_height) |>
+  dplyr::select(weight, height, male) |>
+  dplyr::mutate(weight_c = as.numeric(scale(
+    weight, scale = FALSE, center = TRUE
+  )))
+
+# create table
+df_nzdat |>
+  dplyr::select(weight, height) |>
+  gtsummary::tbl_summary(
+    statistic = list(
+      all_continuous() ~ "{mean} ({sd})",
+      all_categorical() ~ "{n} / {N} ({p}%)"
+    ),
+    digits = all_continuous() ~ 2,
+    missing_text = "(Missing)"
   ) |>
-  # total_score
-  dplyr::mutate(total_score = newsworthiness + trustworthiness) |>
-  # select top 5% of combined scores
-  dplyr::mutate(selected = ifelse(total_score >= quantile(total_score, 1 - p), TRUE, FALSE))
+  bold_labels()
 ```
 
-Next filter out the high scoring examples, and assess their correlation.
-
-Note that the act of selection *induces* a correlation within our dataset.
+Here is another approach:
 
 ```r
-d |>
-  dplyr::filter(selected == TRUE) |>
-  dplyr::select(newsworthiness, trustworthiness) |>
-  cor()
+# libs we need
+library(table1)
+library(tidyverse)
+library(tidyr)
+library(margot)
+
+# filter 2019 wave
+df_nz_1 <- df_nz |>
+  dplyr::filter(wave == 2019)
+
+# nicer labels
+table1::label(df_nz_1$hlth_weight) <- "Weight"
+table1::label(df_nz_1$hlth_height) <- "Height"
+
+# table
+table1::table1(~ hlth_weight + hlth_height, data = df_nz_1)
 ```
 
-This makes it seem as if there is a relationship between trustworthiness and newsworthiness in science, even when there isn't any.
+Create graph:
 
 ```r
-# we'll need this for the annotation
+library("patchwork")
+
+# create data set where filtering na vals
+df_nzdat1 <- df_nzdat |>
+  dplyr::filter(!is.na(weight),
+                !is.na(height),
+                !is.na(male))
+
+weight_density <- ggplot2::ggplot(data = df_nzdat1, aes(x = weight)) +
+  geom_density(fill = "chocolate2") +
+  labs(title = "Density plot of weight of NZ sample years 2019/2020") +
+  theme_classic()
+
+weight_density
+
+height_density <- ggplot2::ggplot(data = df_nzdat1, aes(x = height)) +
+  geom_density(fill = "blue2") +
+  labs(title = "Density plot of height of NZ sample years 2019/2020") +
+  theme_classic()
+
+height_density
+weight_density / height_density + plot_annotation(tag_levels = "a")
+```
+
+Here is a density plot:
+
+```r
 library(ggplot2)
-text <-
-  dplyr::tibble(
-    newsworthiness  = c(2, 1),
-    trustworthiness = c(2.25, -2.5),
-    selected        = c(TRUE, FALSE),
-    label           = c("selected", "rejected")
-  )
 
-d |>
-  ggplot2::ggplot(aes(x = newsworthiness, y = trustworthiness, color = selected)) +
-  ggplot2::geom_point(aes(shape = selected), alpha = 3 / 4) +
-  ggplot2::geom_text(data = text,
-            aes(label = label)) +
-  ggplot2::geom_smooth(
-    data = d |> filter(selected == TRUE),
-    method = "lm",
-    fullrange = T,
-    color = "lightblue",
-    se = F,
-    size = 1
-  ) +
-  ggplot2::scale_shape_manual(values = c(1, 19)) +
-  ggplot2::scale_x_continuous(limits = c(-3, 3.9), expand = c(0, 0)) +
-  ggplot2::coord_cartesian(ylim = range(d$trustworthiness)) +
-  ggplot2::theme(legend.position = "none") +
-  ggplot2::xlab("Newsworthy") +
-  ggplot2::ylab("Trustworthy") + theme_bw()
+ggplot2::ggplot(data = df_nzdat1, aes(x = weight, fill = as.factor(male))) +
+  geom_density() +
+  labs(title = "Density plot of weight of NZ sample years 2019/2020") +
+  theme_classic() +
+  scale_fill_viridis_d()
 ```
 
-Once we know a proposal has been selected, if it is newsworthy we can predict that it is less trustworthy. Our simulation produces this prediction even though we simulated a world in which there is no relationship between trustworthiness and newsworthiness.
+## Solution Q2: Regress height ~ weight and report results
 
-Selection bias is commonplace.
-
-## Collider bias within experiments
-
-We noted that conditioning on a post-treatment variable can induce bias by blocking the path between the experimental manipulation and the outcome. However, such conditioning can open a path even when there is no experimental effect.
+Model:
 
 ```r
-dag_ex2 <- dagify(
-  C1 ~ C0 + U,
-  Ch ~ U + R,
-  labels = c(
-    "R" = "Ritual",
-    "C1" = "Charity-post",
-    "C0" = "Charity-pre",
-    "Ch" = "Cohesion",
-    "U" = "Religiousness (Unmeasured)"
-  ),
-  exposure = "R",
-  outcome = "C1",
-  latent = "U"
-) |>
-  control_for(c("Ch", "C0"))
-
-dag_ex2 |>
-  ggdag(text = FALSE,
-    use_labels = "label")
+# regression of height ~ weight
+fit_1 <- lm(height ~ weight_c, data = df_nzdat)
 ```
 
-How do we avoid collider bias here?
-
-Note what happens if we condition on cohesion:
+Table:
 
 ```r
-dag_ex2 |>
-  ggdag_collider(
-    text = FALSE,
-    use_labels = "label"
-  ) +
-  ggtitle("Cohesion is a collider that opens a path from ritual to charity")
+library(parameters)
+
+# table of model
+parameters::model_parameters(fit_1) |>
+  print_html(digits = 2,
+             select = "{coef}{stars}|({ci})",
+             column_labels = c("Estimate", "95% CI"))
 ```
 
-Don't condition on a post-treatment variable!
+Prediction:
 
 ```r
-dag_ex3 <- dagify(
-  C1 ~ C0,
-  C1 ~ U,
-  Ch ~ U + R,
-  labels = c(
-    "R" = "Ritual",
-    "C1" = "Charity-post",
-    "C0" = "Charity-pre",
-    "Ch" = "Cohesion",
-    "U" = "Religiousness (Unmeasured)"
-  ),
-  exposure = "R",
-  outcome = "C1",
-  latent = "U"
-)
-ggdag_adjustment_set(dag_ex3)
+library(ggeffects)
+library(ggplot2)
+
+# generate the plot
+plot(ggeffects::ggpredict(fit_1, terms = "weight_c"))
 ```
 
-## Taxonomy of confounding
-
-There is good news. Remember, ultimately there are only four basic types of confounding:
-
-### The fork (omitted variable bias)
+Briefly report your results (note: replace "significant" with "statistically significant"):
 
 ```r
-confounder_triangle(x = "Coffee",
-                    y = "Lung Cancer",
-                    z = "Smoking") |>
-  ggdag_dconnected(text = FALSE,
-                   use_labels = "label")
+report::report(fit_1)
 ```
 
-### The pipe (fully mediated effects)
+## Solution Q3: Regress height ~ male and report results
+
+Model and table:
 
 ```r
-mediation_triangle(
-  x = NULL,
-  y = NULL,
-  m = NULL,
-  x_y_associated = FALSE
-) |>
-  tidy_dagitty(layout = "nicely") |>
-  ggdag()
+# regression of height ~ male
+fit_2 <- lm(hlth_height ~ male, data = df_nz)
+sjPlot::tab_model(fit_2)
 ```
 
-### The collider
+Graph:
 
 ```r
-collider_triangle() |>
-  ggdag_dseparated(controlling_for = "m")
+# plot over the range of the data
+plot_fit_2 <- plot(
+  ggeffects::ggpredict(fit_2, terms = "male[all]",
+  jitter = .1,
+  add.data = TRUE,
+  dot.alpha = .2
+))
+
+# plot
+plot_fit_2 +
+  scale_y_continuous(limits = c(1.2, 2.1))
 ```
 
-### Confounding by proxy
-
-If we "control for" a descendant of a collider, we will introduce collider bias.
+Report:
 
 ```r
-dag_sd <- dagify(
-  Z ~ X,
-  Z ~ Y,
-  D ~ Z,
-  labels = c(
-    "Z" = "Collider",
-    "D" = "Descendant",
-    "X" = "X",
-    "Y" = "Y"
-  ),
-  exposure = "X",
-  outcome = "Y"
-) |>
-  control_for("D")
-
-dag_sd |>
-  ggdag_dseparated(
-    from = "X",
-    to = "Y",
-    controlling_for = "D",
-    text = FALSE,
-    use_labels = "label"
-  ) +
-  ggtitle("X --> Y, controlling for D",
-          subtitle = "D induces collider bias")
+report::report(fit_2)
 ```
 
-## Rules for avoiding confounding
+## Solution Q4: Regression to predict
 
-From *Statistical Rethinking*, p. 286:
-
-> List all of the paths connecting X (the potential cause of interest) and Y (the outcome).
-
-> Classify each path by whether it is open or closed. A path is open unless it contains a collider.
-
-> Classify each path by whether it is a backdoor path. A backdoor path has an arrow entering X.
-
-> If there are any open backdoor paths, decide which variable(s) to condition on to close it (if possible).
+Using the regression coefficients from the Pearson and Lee 1903 dataset, predict the heights of daughters of women in the `df_nz` dataset.
 
 ```r
-# example
-# call ggdag model
-# write relationships
+# model for daughter height from mother height
+fit_3 <- lm(daughter_height ~ mother_height, data = df_pearson_lee)
 
-library(ggdag)
-dg_1 <- ggdag::dagify(
-  b ~ im + ordr + rel + sr + st,
-  rel ~ age + ses + edu + male + cny,
-  ses ~ cny + edu + age,
-  edu ~ cny + male + age,
-  im ~ mem + rel + cny,
-  mem ~ age + edu + ordr,
-  exposure = "sr",
-  outcome = "b",
-  labels = c(
-    "b" = "statement credibility",
-    "sr" = "source",
-    "st" = "statement",
-    "im" = "importance",
-    "mem" = "memory",
-    "s" = "source",
-    "rel" = "religious",
-    "cny" = "country",
-    "mem" = "memory",
-    "male" = "male",
-    "ordr" = "presentation order",
-    "ses" = "perceived SES",
-    "edu" = "education",
-    "age" = "age"
-  )
-) |>
-  control_for("rel")
+# create data frame of not_male's in 2019
+# notice problem: not_male != woman
+# additionally, woman != mother!
 
-ggdag::ggdag_collider(dg_1, text = FALSE, use_labels = "label")
+df_nz_2 <- df_nz |>
+  filter(male == 1) |>
+  dplyr::select(hlth_height) |>
+  dplyr::mutate(mother_height = hlth_height * 39.36) |>
+  dplyr::select(mother_height) |>
+  dplyr::arrange((mother_height))
+
+# find min and max heights, store as objects
+min_mother_height <- min(df_nz_2$mother_height, na.rm = TRUE)
+max_mother_height <- max(df_nz_2$mother_height, na.rm = TRUE)
+
+# expand grid, use stored objects to define boundaries
+df_expand_grid_nz_2 <-
+  expand.grid(mother_height = seq(
+    from = min_mother_height,
+    to = max_mother_height,
+    length.out = 200
+  ))
+
+# use the predict function to create a new response using the pearson and lee regression model
+predict_fit_3 <-
+  predict(fit_3,
+          type = "response",
+          interval = "confidence",
+          newdata = df_expand_grid_nz_2)
+
+# combine variables into a data frame
+df_expand_grid_nz_2_predict_fit_3 <-
+  data.frame(df_expand_grid_nz_2, predict_fit_3)
+
+# graph the expected average hypothetical heights of "daughters"
+predplot2 <-
+  ggplot(data = df_expand_grid_nz_2_predict_fit_3,
+         aes(x = mother_height, y = fit)) +
+  geom_line(colour = "cadetblue") +
+  geom_errorbar(aes(ymin = lwr, ymax = upr), width = .1) +
+  scale_x_continuous(limits = c(50, 75)) +
+  scale_y_continuous(limits = c(50, 75)) +
+  theme_classic() +
+  xlab("NZ 2019 female population") +
+  ylab("Predicted daughter heights in inches") +
+  labs(title = "Regression prediction for hypothetical daughter heights of NZ population in 2019")
+
+# plot
+predplot2
 ```
 
-Note the colliders induced from the "controls" that we had included in the study:
+## Solution Q5: Bonus
+
+On average, how much taller or shorter are women in New Zealand as sampled in 2019 compared with women in 1903 as sampled in the Pearson and Lee dataset?
 
 ```r
-p3 <- ggdag::ggdag_dseparated(
-  dg_1,
-  from = "sr",
-  to = "b",
-  controlling_for = c("ses", "age", "cny", "im", "edu", "mem", "male", "rel"),
-  text = FALSE,
-  use_labels = "label"
-) +
-  theme_dag_blank() +
-  labs(title = "Collider confounding occurs when we 'control for' a bunch of variables")
-p3
+# create var for 1903 dataset
+df_pearson_lee_2 <- df_pearson_lee |>
+  dplyr::select(mother_height, daughter_height) |>
+  tidyr::pivot_longer(everything(), names_to = "relation", values_to = "f_height") |>
+  dplyr::mutate(year_is = factor("1903"))
+
+# create var for the 2019 dataset
+df_nz_combine_pearson_lee <- df_nz_2 |>
+  dplyr::rename(f_height = mother_height) |>
+  dplyr::mutate(year_is = factor("2019"),
+                relation = factor("mother"))
+
+head(df_nz_combine_pearson_lee)
+
+# combine data frames row-wise
+df_nz_combine_pearson_lee_1 <- rbind(df_pearson_lee_2, df_nz_combine_pearson_lee)
 ```
 
-How do we fix the problem? Think hard about the causal network and let `ggdag` do the work.
+Look at heights in sample:
 
 ```r
-# find adjustment set
-p2 <- ggdag::ggdag_adjustment_set(dg_1,
-                                  text = FALSE,
-                                  use_labels = "label") +
-  theme_dag_blank() +
-  labs(title = "Adjustment set",
-       subtite = "Model for Source credibility from belief")
-p2
+table(df_nz_combine_pearson_lee_1$year_is)
+
+# box plot
+ggplot2::ggplot(data = df_nz_combine_pearson_lee_1,
+                aes(x = year_is, y = f_height, fill = year_is)) +
+  geom_boxplot(notch = TRUE) +
+  labs(title = "Comparison of female height 1903/2019") +
+  theme_classic() +
+  scale_fill_viridis_d()
 ```
 
-## Inference depends on assumptions that are not contained in the data
-
-> "Regression itself does not provide the evidence you need to justify a causal model. Instead, you need some science." (Richard McElreath, *Statistical Rethinking*, Chapter 6)
-
-> "The data alone can never tell you which causal model is correct." (Richard McElreath, *Statistical Rethinking*, Chapter 5)
-
-> "The parameter estimates will always depend upon what you believe about the causal model, because typically several (or very many) causal models are consistent with any one set of parameter estimates." (*Statistical Rethinking*, Chapter 5)
-
-Suppose we assume that the source condition affects religion, say through priming. We then have the following DAG:
+Predict heights out of sample:
 
 ```r
-# adding religion to effect on edu
-dg_3 <- ggdag::dagify(
-  b ~ im + ordr + rel + st + sr,
-  rel ~ age + ses + edu + male + cny + sr,
-  ses ~ cny + edu + age,
-  edu ~ cny + male + age,
-  im ~ mem + rel + cny,
-  mem ~ age + edu + ordr,
-  exposure = "rel",
-  outcome = "b",
-  labels = c(
-    "b" = "statement credibility",
-    "sr" = "source",
-    "st" = "statement",
-    "im" = "importance",
-    "mem" = "memory",
-    "s" = "source",
-    "rel" = "religious",
-    "cny" = "country",
-    "mem" = "memory",
-    "male" = "male",
-    "ordr" = "presentation order",
-    "ses" = "perceived SES",
-    "edu" = "education",
-    "age" = "age"
-  )
-) |>
-  control_for("rel")
+# regression model
+fit_4 <- lm(f_height ~ year_is, data = df_nz_combine_pearson_lee_1)
 
-ggdag(dg_3, text = FALSE, use_labels = "label")
+# table
+sjPlot::tab_model(fit_4)
 ```
 
-We turn to our trusted oracle and ask: "What do we condition on to obtain an unbiased causal estimate?"
-
-The oracle replies:
+Women in 2019 are taller.
 
 ```r
-ggdag::ggdag_adjustment_set(
-  dg_3,
-  exposure = "sr",
-  outcome = "b",
-  text = FALSE,
-  use_labels = "label"
-) +
-  theme_dag_blank() +
-  labs(title = "Adjustment set",
-       subtite = "Model for Source credibility from belief")
+report::report(fit_4)
 ```
 
-Your data cannot answer your question.
-
-## More examples of confounding and de-confounding
-
-Here's another example from recent NZAVS research:
+Graph:
 
 ```r
-tidy_ggdag <- dagify(
-  WB ~ belief + age_within + age_between + partner + nzdep + urban + male + pols + empl,
-  WB ~~ partner,
-  belief ~ age_within + age_between + male + ethn,
-  partner ~ nzdep + age_within + age_between + belief,
-  nzdep ~ empl + age_within + age_between,
-  pols ~ age_within + age_between + empl + ethn,
-  empl ~ edu + ethn + age_within + age_between,
-  exposure = "belief",
-  outcome = "WB"
-) |>
-  tidy_dagitty()
+# get meaningful values for the y-axis range
+min_mother_height_for_range <- min(df_nz_combine_pearson_lee_1$f_height, na.rm = TRUE)
+max_mother_height_for_range <- max(df_nz_combine_pearson_lee_1$f_height, na.rm = TRUE)
 
-# graph
-tidy_ggdag |>
-  ggdag()
+# make graph
+plot(
+  ggeffects::ggpredict(fit_4, terms = "year_is",
+  add.data = TRUE,
+  dot.alpha = .2
+)) +
+  labs(title = "Predicted difference in female heights 1903/2019") +
+  xlab("Study year") +
+  ylab("Predicted female height (inches)") +
+  scale_y_continuous(
+    limits = c(min_mother_height_for_range, max_mother_height_for_range))
 ```
 
-We can examine which variables to select, conditional on the causal assumptions of this DAG:
+Graph with predicted points:
 
 ```r
-# graph adjustment sets
-ggdag::ggdag_adjustment_set(tidy_ggdag, node_size = 14) +
-  theme(legend.position = "bottom") + theme_dag_blank()
+ggeffects::ggpredict(fit_4, terms = "year_is")
+
+# graph with predicted values based on the model
+plot(
+  ggeffects::ggpredict(fit_4, terms = "year_is",
+  add.data = TRUE,
+  dot.alpha = .01,
+  colors = "us",
+  jitter = .5)) +
+  labs(title = "Predicted difference in female heights 1903/2019") +
+  xlab("Study year") +
+  ylab("Predicted female height (inches)") +
+  scale_y_continuous(
+    limits = c(min_mother_height_for_range, max_mother_height_for_range))
 ```
 
-This method reveals two adjustment sets: {age, employment, male, political conservatism, and time}, and {age, ethnicity, male, and time}. We report the second set because employment is probable to contain more measurement error: some are not employed because they cannot find employment, others because they are not seeking employment (e.g. retirement).
+---
 
-### Unmeasured causes
+# Appendix: Conceptual Background
 
-Return to the previous example of R and C on K6 distress, but imagine an underlying common cause of both C and R (say childhood upbringing) called "U":
+Some preliminaries about science.
 
-```r
-dag_m3 <- dagify(
-  K ~ C + R,
-  C ~ U,
-  R ~ U,
-  exposure = "C",
-  outcome = "K",
-  latent = "U"
-) |>
-  tidy_dagitty(layout = "nicely")
+## Science begins with a question
 
-dag_m3 |>
-  ggdag()
-```
+Science begins with a question about the world. The first step in science, then, is to clarify what you want to know.
 
-How do we assess the relationship of C on K?
+Because science is a social practice, you will also need to clarify why your question is interesting: so what?
 
-We can close the backdoor from U through R by conditioning on R:
+In short, know your question.
 
-```r
-ggdag::ggdag_adjustment_set(dag_m3)
-```
+## Scientific model (or theory)
 
-Aside, we can simulate this relationship using the following code:
+Sometimes, scientists are interested in specific features of the world: how did virus x originate? Such a question might have a forensic interest: what constellation of events gave rise to a novel infectious disease?
 
-```r
-# C -> K <- R
-# C <- U -> R
-n <- 100
-U <- rnorm(n)
-R <- rnorm(n, U)
-C <- rnorm(n, U)
-K <- rnorm(n, R - C)
-d_sim3 <- data.frame(K = K, R = R, U = U, C = C)
-```
+Scientists typically seek generalisations. How do infectious diseases evolve? How do biological organisms evolve? Such questions have applied interests. How can we better prevent infectious diseases? How did life originate?
 
-### What is the relationship between smoking and cardiac arrest?
+A scientific model proposes how nature is structured (and unstructured). For example, the theory of evolution by natural selection proposes that life emerges from variation, inheritance, and differential reproduction/survival.
 
-This example is from the `ggdag` package, by Malcolm Barrett ([link](https://ggdag.malco.io/)):
+To evaluate a scientific model, scientists must make generalisations beyond individual cases. This is where statistics shines.
 
-```r
-smoking_ca_dag <- dagify(
-  cardiacarrest ~ cholesterol,
-  cholesterol ~ smoking + weight,
-  smoking ~ unhealthy,
-  weight ~ unhealthy,
-  labels = c(
-    "cardiacarrest" = "Cardiac\n Arrest",
-    "smoking" = "Smoking",
-    "cholesterol" = "Cholesterol",
-    "unhealthy" = "Unhealthy\n Lifestyle",
-    "weight" = "Weight"
-  ),
-  latent = "unhealthy",
-  exposure = "smoking",
-  outcome = "cardiacarrest"
-)
+## What is statistics?
 
-ggdag(smoking_ca_dag,
-      text = FALSE,
-      use_labels = "label")
-```
+Mathematics is a logic of certainty.
 
-What do we condition on to close any open backdoor paths, while avoiding colliders? We imagine that unhealthy lifestyle is unmeasured.
+Statistics is a logic of uncertainty.
 
-```r
-ggdag_adjustment_set(
-  smoking_ca_dag,
-  text = FALSE,
-  use_labels = "label",
-  shadow = TRUE
-)
-```
+A statistical model uses the logic of probability to make better guesses.
 
-What if we control for cholesterol?
+## Applications of statistical models in science
 
-```r
-ggdag_dseparated(
-  smoking_ca_dag,
-  controlling_for = c("weight", "cholesterol"),
-  text = FALSE,
-  use_labels = "label",
-  collider_lines = FALSE
-)
-```
+Scientific models seek to explain how nature is structured. Where scientific models conflict, we can combine statistical models with data collection to evaluate the credibility of one theoretical model over others. To do this, a scientific model must make distinct, non-trivial predictions about the world.
 
-> Controlling for intermediate variables may also induce bias, because it decomposes the total effect of x on y into its parts. (ggdag documentation)
-
-### Selection bias in sampling
-
-This example is from <https://ggdag.malco.io/articles/bias-structures.html>.
-
-> Let's say we're doing a case-control study and want to assess the effect of smoking on glioma, a type of brain cancer. We have a group of glioma patients at a hospital and want to compare them to a group of controls, so we pick people in the hospital with a broken bone, since that seems to have nothing to do with brain cancer. However, perhaps there is some unknown confounding between smoking and being in the hospital with a broken bone, like being prone to reckless behaviour. In the normal population, there is no causal effect of smoking on glioma, but in our case, we're selecting on people who have been hospitalised, which opens up a back-door path:
-
-```r
-coords_mine <- tibble::tribble(
-  ~name,           ~x,  ~y,
-  "glioma",         1,   2,
-  "hospitalized",   2,   3,
-  "broken_bone",    3,   2,
-  "reckless",       4,   1,
-  "smoking",        5,   2
-)
-
-dagify(hospitalized ~ broken_bone + glioma,
-       broken_bone ~ reckless,
-       smoking ~ reckless,
-       labels = c(hospitalized = "Hospitalization",
-                  broken_bone = "Broken Bone",
-                  glioma = "Glioma",
-                  reckless = "Reckless \nBehaviour",
-                  smoking = "Smoking"),
-       coords = coords_mine) |>
-  ggdag_dconnected("glioma", "smoking", controlling_for = "hospitalized",
-                   text = FALSE, use_labels = "label", collider_lines = FALSE)
-```
-
-> Even though smoking doesn't actually cause glioma, it will appear as if there is an association. Actually, in this case, it may make smoking appear to be protective against glioma, since controls are more probable to be smokers.
-
-### Selection bias in longitudinal research
-
-Suppose we want to estimate the effect of ethnicity on ecological orientation in a longitudinal dataset where there is selection bias from homeownership (it is easier to reach homeowners by the mail).
-
-Suppose the following DAG:
-
-```r
-dag_sel <- dagify(
-  retained ~ homeowner,
-  homeowner ~ income + ethnicity,
-  ecologicalvalues ~ ethnicity + income,
-  labels = c(
-    retained = "retained",
-    homeowner = "homeowner",
-    ethnicity = "ethnicity",
-    income = "income",
-    ecologicalvalues = "Ecological \n Orientation"
-  ),
-  exposure = "ethnicity",
-  outcome = "ecologicalvalues"
-) |>
-  control_for("retained")
-
-dag_sel |>
-  ggdag_adjust(
-    "retained",
-    layout = "mds",
-    text = FALSE,
-    use_labels = "label",
-    collider_lines = FALSE
-  )
-```
-
-Notice that "retained" falls downstream from a collider, "home ownership":
-
-```r
-ggdag_collider(dag_sel)
-```
-
-Because we are stratifying on "retained", we introduce collider bias in our estimate of ethnicity on ecological values.
-
-```r
-ggdag_dseparated(
-  dag_sel,
-  controlling_for = "retained",
-  text = FALSE,
-  use_labels = "label",
-  collider_lines = TRUE
-)
-```
-
-However we have an adjustment set:
-
-```r
-ggdag_adjustment_set(dag_sel)
-```
-
-## Workflow
-
-1. Import your data
-2. Check that data types are correct
-3. Graph your data
-4. Consider your question
-5. If causal, draw your DAG(s)
-6. Explain your DAGs
-7. Write your model
-8. Run your model
-9. Graph and interpret your results
-10. Return to your question, and assess what you have learned
-
-(Typically there are multiple iterations between these steps in your workflow. Annotate your scripts; keep track of your decisions.)
-
-## Summary
-
-We control for variables to avoid omitted variable bias. Omitted variable bias is real, but included variable bias is also commonplace. Included variable biases arise from "pipes", "colliders", and conditioning on descendants of colliders. The `ggdag` package can help you to obtain causal inference, but it relies on assumptions that are not part of your data. Clarify your assumptions.
+If the predictions are not distinct, the observations will not enable a shift in credibility for one theory over another. Consider the theory that predicts any observation. Such a theory would be better classified as a conspiracy theory; it is compatible with any evidence.

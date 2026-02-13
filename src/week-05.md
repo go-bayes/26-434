@@ -237,7 +237,7 @@ In **observational data**, inferring average treatment effects demands that we s
 
 ---
 
-Lab materials: [Lab 5: G-Computation and the clarify Package](lab-05.md)
+Lab materials: [Lab 5: Causal Diagrams with ggdag](lab-05.md)
 
 ---
 

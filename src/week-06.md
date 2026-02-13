@@ -319,7 +319,7 @@ Understanding these differences is key to doing good causal research.
 
 ---
 
-Lab materials: [Lab 6: Data Wrangling and Effect Modification](lab-06.md)
+Lab materials: [Lab 6: G-Computation and the clarify Package](lab-06.md)
 
 ---
 

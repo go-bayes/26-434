@@ -38,9 +38,10 @@
 
 # Weekly Labs
 
-- [Lab 1: Install R and RStudio](lab-01.md)
-- [Lab 2: Regression, Graphing, and Simulation](lab-02.md)
-- [Lab 3: Regression and Confounding Bias](lab-03.md)
-- [Lab 4: Causal Diagrams with ggdag](lab-04.md)
-- [Lab 5: G-Computation and the clarify Package](lab-05.md)
-- [Lab 6: Data Wrangling and Effect Modification](lab-06.md)
+- [Lab 1: Git and GitHub](lab-01.md)
+- [Lab 2: Install R and RStudio](lab-02.md)
+- [Lab 3: Regression, Graphing, and Simulation](lab-03.md)
+- [Lab 4: Regression and Confounding Bias](lab-04.md)
+- [Lab 5: Causal Diagrams with ggdag](lab-05.md)
+- [Lab 6: G-Computation and the clarify Package](lab-06.md)
+- [Lab 7: Data Wrangling and Effect Modification](lab-07.md)

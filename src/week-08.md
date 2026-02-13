@@ -141,3 +141,7 @@ Our workflow in this lecture answers three questions in sequence:
 3. **Can we express the targeting rule in a few defensible steps?** Fit and validate a shallow policy tree.
 
 In the lab section you will reproduce each stage on a simulated dataset. Next week we turn to the applied side of RATE statistics: interpreting AUTOC curves, Qini curves, and building policy trees from causal forest output.
+
+---
+
+Lab materials: [Lab 7: Data Wrangling and Effect Modification](lab-07.md)

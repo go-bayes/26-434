@@ -1,11 +1,11 @@
 # Week 1: Asking Questions in Cross-Cultural Psychology
 
-**Lab: Getting Started with R**
+**Lab: Git and GitHub**
 
 ![Causal graph: we refer to this image in the lecture and begin reviewing causal graphs in Week 2](figures/dag-week01.svg)
 
 ```admonish note title="Background readings"
-None today. If you want to get started, download R and RStudio as described below. Recommended readings are listed at the end of this page.
+None today. Recommended readings are listed at the end of this page.
 ```
 
 ```admonish warning title="Key concepts for the test(s)"
@@ -18,16 +18,8 @@ Today we introduce the following topics relevant to the test(s):
 Today we discuss these concepts informally. We define them formally in **week 2**.
 ```
 
-```admonish tip title="Download your lab R script"
-Once you have installed R and RStudio:
-
-1. Download the R script for Lab 01 from the link below.
-2. Open RStudio.
-3. Go to `File > New File > R Script`.
-4. Paste the contents of the downloaded `.R` file into the new script.
-5. Save it in your project directory.
-
-[Download the R script for Lab 01](https://raw.githubusercontent.com/go-bayes/psych-434-2025/refs/heads/main/laboratory/01-lab.R)
+```admonish tip title="Before next week"
+Install R and RStudio before week 2. Instructions are in [Lab 2: Install R and RStudio](lab-02.md).
 ```
 
 ---
@@ -41,4 +33,4 @@ Slides are available separately (not embedded in the mdBook site).
 
 ---
 
-Lab materials: [Lab 1: Install R and RStudio](lab-01.md)
+Lab materials: [Lab 1: Git and GitHub](lab-01.md)

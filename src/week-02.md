@@ -163,4 +163,4 @@ You might wonder: "If not from the data, where do our assumptions about causalit
 
 ---
 
-Lab materials: [Lab 2: Regression, Graphing, and Simulation](lab-02.md)
+Lab materials: [Lab 2: Install R and RStudio](lab-02.md)

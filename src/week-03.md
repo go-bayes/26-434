@@ -62,4 +62,4 @@ The next figure presents six examples of time-series data that are not resolved 
 
 ---
 
-Lab materials: [Lab 3: Regression and Confounding Bias](lab-03.md)
+Lab materials: [Lab 3: Regression, Graphing, and Simulation](lab-03.md)

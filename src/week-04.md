@@ -54,4 +54,4 @@ For the lab, copy and paste code chunks following the "Lab 04" section.
 
 ---
 
-Lab materials: [Lab 4: Causal Diagrams with ggdag](lab-04.md)
+Lab materials: [Lab 4: Regression and Confounding Bias](lab-04.md)
